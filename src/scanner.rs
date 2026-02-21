@@ -3,10 +3,6 @@ use std::path::{Path, PathBuf};
 
 pub fn scan_files(path: &Path, recursive: bool) -> Result<Vec<PathBuf>, Box<dyn Error>> {
     let mut out = Vec::new();
-    if path.is_file() {
-        out.push(path.to_path_buf());
-        return Ok(out);
-    }
     if recursive {
         let mut stack = vec![path.to_path_buf()];
         while let Some(dir) = stack.pop() {
