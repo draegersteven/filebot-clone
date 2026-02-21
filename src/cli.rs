@@ -66,9 +66,9 @@ pub fn parse_args(args: &[String]) -> Result<Commands, String> {
         }
         "match" => {
             if args.get(2).map(|s| s.as_str()) != Some("movie") { return Err("only 'match movie' supported".into()); }
-            let path = positional_after(&args[3..]).ok_or("match movie requires <path>")?;
+            if args.len() < 4 { return Err("match movie requires <path>".into()); }
             Ok(Commands::MatchMovie {
-                path: path.into(),
+                path: args[3].clone().into(),
                 tmdb_key: value_of(args, "--tmdb-key"),
                 language: value_of(args, "--language").unwrap_or_else(|| "de-DE".into()),
                 dry_run: has_flag(args, "--dry-run"),
@@ -84,42 +84,6 @@ fn value_of(args: &[String], name: &str) -> Option<String> {
     args.windows(2).find(|w| w[0] == name).map(|w| w[1].clone())
 }
 
-fn positional_after(args: &[String]) -> Option<String> {
-    let mut i = 0;
-    while i < args.len() {
-        let a = &args[i];
-        if a.starts_with("--") {
-            let takes_value = matches!(a.as_str(), "--tmdb-key" | "--language");
-            i += if takes_value { 2 } else { 1 };
-            continue;
-        }
-        return Some(a.clone());
-    }
-    None
-}
-
 pub fn help_text() -> &'static str {
     "mybot usage:\n  mybot scan <path> [--recursive]\n  mybot plan <path> [--recursive] --format \"<template>\" [--action rename|move|copy] [--output <dir>] [--dry-run] [--db tmdb --tmdb-key <key>]\n  mybot apply <path> [--recursive] --format \"<template>\" [--action rename|move|copy] [--output <dir>] [--dry-run] [--db tmdb --tmdb-key <key>]\n  mybot match movie <path> --tmdb-key <key> [--language de-DE] [--dry-run]"
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn match_movie_allows_flags_before_path() {
-        let args = vec![
-            "mybot".to_string(),
-            "match".to_string(),
-            "movie".to_string(),
-            "--tmdb-key".to_string(),
-            "abc".to_string(),
-            "/tmp/Movie (2025).mkv".to_string(),
-        ];
-        let cmd = parse_args(&args).expect("parse");
-        match cmd {
-            Commands::MatchMovie { path, .. } => assert_eq!(path, PathBuf::from("/tmp/Movie (2025).mkv")),
-            _ => panic!("expected match movie"),
-        }
-    }
 }

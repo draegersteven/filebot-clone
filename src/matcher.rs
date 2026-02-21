@@ -18,40 +18,11 @@ pub trait HttpClient {
     fn get_json(&self, url: &str, query: &[(&str, String)], bearer: &str) -> Result<String, Box<dyn Error>>;
 }
 
-pub struct CurlHttpClient;
-impl HttpClient for CurlHttpClient {
-    fn get_json(&self, url: &str, query: &[(&str, String)], bearer: &str) -> Result<String, Box<dyn Error>> {
-        let mut full_url = url.to_string();
-        if !query.is_empty() {
-            full_url.push('?');
-            full_url.push_str(&query.iter().map(|(k,v)| format!("{}={}", url_encode(k), url_encode(v))).collect::<Vec<_>>().join("&"));
-        }
-        let output = match std::process::Command::new("curl")
-            .args(["-sS", "-H", &format!("Authorization: Bearer {bearer}"), &full_url])
-            .output() {
-            Ok(v) => v,
-            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
-                return Err("TMDB request failed: 'curl' was not found in PATH. Install curl or use build with native HTTP client.".into());
-            }
-            Err(err) => return Err(err.into()),
-        };
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(format!("TMDB request failed (curl status {}): {}", output.status, stderr.trim()).into());
-        }
-        Ok(String::from_utf8(output.stdout)?)
+pub struct NoopHttpClient;
+impl HttpClient for NoopHttpClient {
+    fn get_json(&self, _url: &str, _query: &[(&str, String)], _bearer: &str) -> Result<String, Box<dyn Error>> {
+        Err("No built-in HTTP client in offline MVP. Use mock in tests.".into())
     }
-}
-
-fn url_encode(input: &str) -> String {
-    input
-        .bytes()
-        .flat_map(|b| match b {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => vec![b as char],
-            b' ' => vec!['+'],
-            _ => format!("%{:02X}", b).chars().collect(),
-        })
-        .collect()
 }
 
 pub fn match_movie(client: &dyn HttpClient, key: &str, query: &MovieQuery) -> Result<Option<MovieMatch>, Box<dyn Error>> {

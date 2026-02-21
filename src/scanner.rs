@@ -2,15 +2,7 @@ use std::error::Error;
 use std::path::{Path, PathBuf};
 
 pub fn scan_files(path: &Path, recursive: bool) -> Result<Vec<PathBuf>, Box<dyn Error>> {
-    if !path.exists() {
-        return Err(format!("Path does not exist: {}", path.display()).into());
-    }
-
     let mut out = Vec::new();
-    if path.is_file() {
-        out.push(path.to_path_buf());
-        return Ok(out);
-    }
     if recursive {
         let mut stack = vec![path.to_path_buf()];
         while let Some(dir) = stack.pop() {
@@ -33,16 +25,4 @@ pub fn scan_files(path: &Path, recursive: bool) -> Result<Vec<PathBuf>, Box<dyn 
         }
     }
     Ok(out)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn returns_clear_error_for_missing_path() {
-        let missing = PathBuf::from("/definitely/not/existing/mybot-path");
-        let err = scan_files(&missing, false).expect_err("must fail");
-        assert!(err.to_string().contains("Path does not exist"));
-    }
 }
